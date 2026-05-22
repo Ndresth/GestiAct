@@ -1,186 +1,274 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
+
+import Navbar from "../components/Navbar";
+import Sidebar from "../components/Sidebar";
+import AuthGuard from "../components/AuthGuard";
 
 export default function Activos() {
   const [activos, setActivos] = useState([]);
+  const [categorias, setCategorias] = useState([]);
+
   const [form, setForm] = useState({
     nombre: "",
     serial: "",
     categoria: "",
     marca: "",
     modelo: "",
-    ubicacion: ""
+    ubicacion: "",
   });
-  const [editandoId, setEditandoId] = useState(null);
 
-  const cargarActivos = useCallback(async () => {
+  const [editando, setEditando] = useState(false);
+  const [activoId, setActivoId] = useState(null);
+
+  const cargarActivos = async () => {
     try {
       const res = await fetch("http://localhost:4000/api/activos");
       const data = await res.json();
-      setActivos(data);
+
+      setTimeout(() => {
+        setActivos(data);
+      }, 0);
     } catch (error) {
-      console.error("Error al cargar los activos:", error);
+      console.error(error);
     }
-  }, []); 
+  };
+
+  const cargarCategorias = async () => {
+    try {
+      const res = await fetch("http://localhost:4000/api/categorias");
+      const data = await res.json();
+
+      setTimeout(() => {
+        setCategorias(data);
+      }, 0);
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    cargarActivos();
-  }, [cargarActivos]); 
+    setTimeout(() => {
+      cargarActivos();
+      cargarCategorias();
+    }, 0);
+  }, []);
 
   const handleChange = (e) => {
     setForm({
       ...form,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
   };
 
-  const guardarActivo = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (editandoId) {
-      await fetch(`http://localhost:4000/api/activos/${editandoId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(form)
+    try {
+      if (editando) {
+        await fetch(`http://localhost:4000/api/activos/${activoId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(form),
+        });
+
+        alert("Activo actualizado");
+      } else {
+        await fetch("http://localhost:4000/api/activos", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(form),
+        });
+
+        alert("Activo creado");
+      }
+
+      setForm({
+        nombre: "",
+        serial: "",
+        categoria: "",
+        marca: "",
+        modelo: "",
+        ubicacion: "",
       });
-      setEditandoId(null);
-    } else {
-      await fetch("http://localhost:4000/api/activos", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(form)
-      });
+
+      setEditando(false);
+      setActivoId(null);
+
+      cargarActivos();
+    } catch (error) {
+      console.error(error);
     }
-
-    setForm({
-      nombre: "",
-      serial: "",
-      categoria: "",
-      marca: "",
-      modelo: "",
-      ubicacion: ""
-    });
-
-    cargarActivos();
-  };
-
-  const eliminarActivo = async (id) => {
-    await fetch(`http://localhost:4000/api/activos/${id}`, {
-      method: "DELETE"
-    });
-    cargarActivos();
   };
 
   const editarActivo = (activo) => {
+    setEditando(true);
+    setActivoId(activo.id);
+
     setForm({
-      nombre: activo.nombre,
-      serial: activo.serial,
-      categoria: activo.categoria,
-      marca: activo.marca,
-      modelo: activo.modelo,
-      ubicacion: activo.ubicacion
+      nombre: activo.nombre || "",
+      serial: activo.serial || "",
+      categoria: activo.categoria || "",
+      marca: activo.marca || "",
+      modelo: activo.modelo || "",
+      ubicacion: activo.ubicacion || "",
     });
-    setEditandoId(activo.id);
+  };
+
+  const eliminarActivo = async (id) => {
+    const confirmar = confirm("¿Eliminar activo?");
+    if (!confirmar) return;
+
+    try {
+      await fetch(`http://localhost:4000/api/activos/${id}`, {
+        method: "DELETE",
+      });
+
+      alert("Activo eliminado");
+      cargarActivos();
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">
-        Gestión de Activos
-      </h1>
+    <AuthGuard>
+      <div>
+        <Navbar />
 
-      <form onSubmit={guardarActivo} className="grid grid-cols-2 gap-2 mb-6">
-        <input
-          name="nombre"
-          placeholder="Nombre"
-          value={form.nombre}
-          onChange={handleChange}
-          className="border p-2"
-          required
-        />
-        <input
-          name="serial"
-          placeholder="Serial"
-          value={form.serial}
-          onChange={handleChange}
-          className="border p-2"
-          required
-        />
-        <input
-          name="categoria"
-          placeholder="Categoria"
-          value={form.categoria}
-          onChange={handleChange}
-          className="border p-2"
-        />
-        <input
-          name="marca"
-          placeholder="Marca"
-          value={form.marca}
-          onChange={handleChange}
-          className="border p-2"
-        />
-        <input
-          name="modelo"
-          placeholder="Modelo"
-          value={form.modelo}
-          onChange={handleChange}
-          className="border p-2"
-        />
-        <input
-          name="ubicacion"
-          placeholder="Ubicacion"
-          value={form.ubicacion}
-          onChange={handleChange}
-          className="border p-2"
-        />
-        <button
-          type="submit"
-          className="col-span-2 bg-blue-500 text-white p-2 hover:bg-blue-600 transition"
-        >
-          {editandoId ? "Actualizar Activo" : "Guardar Activo"}
-        </button>
-      </form>
+        <div className="flex">
+          <Sidebar />
 
-      <table className="w-full border">
-        <thead className="bg-gray-200">
-          <tr>
-            <th className="border p-2">Nombre</th>
-            <th className="border p-2">Serial</th>
-            <th className="border p-2">Categoria</th>
-            <th className="border p-2">Ubicacion</th>
-            <th className="border p-2">Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {activos.map((a) => (
-            <tr key={a.id}>
-              <td className="border p-2 text-center">{a.nombre}</td>
-              <td className="border p-2 text-center">{a.serial}</td>
-              <td className="border p-2 text-center">{a.categoria}</td>
-              <td className="border p-2 text-center">{a.ubicacion}</td>
-              <td className="border p-2 space-x-2 flex justify-center">
-                <button
-                  onClick={() => editarActivo(a)}
-                  className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600 transition"
+          <main className="flex-1 p-6 bg-gray-100 min-h-screen">
+            <h1 className="text-3xl font-bold mb-6">Gestión de Activos</h1>
+
+            <form
+              onSubmit={handleSubmit}
+              className="bg-white p-6 rounded-xl shadow-md mb-8"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input
+                  name="nombre"
+                  placeholder="Nombre"
+                  value={form.nombre}
+                  onChange={handleChange}
+                  className="border p-3 rounded-lg"
+                  required
+                />
+
+                <input
+                  name="serial"
+                  placeholder="Serial"
+                  value={form.serial}
+                  onChange={handleChange}
+                  className="border p-3 rounded-lg"
+                  required
+                />
+
+                <select
+                  name="categoria"
+                  value={form.categoria}
+                  onChange={handleChange}
+                  className="border p-3 rounded-lg"
+                  required
                 >
-                  Editar
-                </button>
-                <button
-                  onClick={() => eliminarActivo(a.id)}
-                  className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition"
-                >
-                  Eliminar
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+                  <option value="">Seleccione categoría</option>
+                  {categorias.map((c) => (
+                    <option key={c.id} value={c.nombre}>
+                      {c.nombre}
+                    </option>
+                  ))}
+                </select>
+
+                <input
+                  name="marca"
+                  placeholder="Marca"
+                  value={form.marca}
+                  onChange={handleChange}
+                  className="border p-3 rounded-lg"
+                  required
+                />
+
+                <input
+                  name="modelo"
+                  placeholder="Modelo"
+                  value={form.modelo}
+                  onChange={handleChange}
+                  className="border p-3 rounded-lg"
+                  required
+                />
+
+                <input
+                  name="ubicacion"
+                  placeholder="Ubicación"
+                  value={form.ubicacion}
+                  onChange={handleChange}
+                  className="border p-3 rounded-lg"
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg"
+              >
+                {editando ? "Actualizar Activo" : "Guardar Activo"}
+              </button>
+            </form>
+
+            <div className="bg-white p-6 rounded-xl shadow-md overflow-x-auto">
+              <table className="w-full border border-collapse">
+                <thead className="bg-gray-200">
+                  <tr>
+                    <th className="border p-3">Nombre</th>
+                    <th className="border p-3">Serial</th>
+                    <th className="border p-3">Categoría</th>
+                    <th className="border p-3">Marca</th>
+                    <th className="border p-3">Modelo</th>
+                    <th className="border p-3">Ubicación</th>
+                    <th className="border p-3">Acciones</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {activos.map((a) => (
+                    <tr key={a.id} className="hover:bg-gray-100">
+                      <td className="border p-3">{a.nombre}</td>
+                      <td className="border p-3">{a.serial}</td>
+                      <td className="border p-3">{a.categoria}</td>
+                      <td className="border p-3">{a.marca}</td>
+                      <td className="border p-3">{a.modelo}</td>
+                      <td className="border p-3">{a.ubicacion}</td>
+                      <td className="border p-3">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => editarActivo(a)}
+                            type="button"
+                            className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded"
+                          >
+                            Editar
+                          </button>
+
+                          <button
+                            onClick={() => eliminarActivo(a.id)}
+                            type="button"
+                            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
+                          >
+                            Eliminar
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </main>
+        </div>
+      </div>
+    </AuthGuard>
   );
 }

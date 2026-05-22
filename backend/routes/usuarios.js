@@ -9,97 +9,32 @@ require("../supabaseClient");
 
 
 // ============================
-// OBTENER ACTIVOS
+// OBTENER USUARIOS
 // ============================
 
 router.get("/", async (req, res) => {
-
-  const {
-    data,
-    error
-  } =
-  await supabase
-    .from("activos")
-    .select("*")
-    .order("created_at", {
-      ascending: false
-    });
-
-
-
-
-  if (error) {
-
-    console.log(
-      "ERROR ACTIVOS:",
-      error
-    );
-
-    return res
-      .status(500)
-      .json(error);
-
-  }
-
-
-
-
-  res.json(data);
-
-});
-
-
-
-
-// ============================
-// CREAR ACTIVO
-// ============================
-
-router.post("/", async (req, res) => {
 
   try {
 
     const {
 
-      nombre,
-      serial,
-      categoria,
-      marca,
-      modelo,
-      ubicacion
-
-    } = req.body;
-
-
-
-
-    const {
       data,
       error
+
     } =
     await supabase
-      .from("activos")
-      .insert([{
-
-        nombre,
-        serial,
-        categoria,
-        marca,
-        modelo,
-        ubicacion
-
-      }])
-      .select();
+      .from("usuarios")
+      .select("*")
+      .order("id", {
+        ascending: false
+      });
 
 
 
 
     if (error) {
 
-      console.log(
-        "ERROR SUPABASE:",
-        error
-      );
+      console.log(error);
 
       return res
         .status(500)
@@ -119,10 +54,7 @@ router.post("/", async (req, res) => {
 
     console.log(error);
 
-    res.status(500).json({
-      error:
-      "Error creando activo"
-    });
+    res.status(500).json(error);
 
   }
 
@@ -132,23 +64,135 @@ router.post("/", async (req, res) => {
 
 
 // ============================
-// EDITAR ACTIVO
+// CREAR USUARIO
+// ============================
+
+router.post("/", async (req, res) => {
+
+  try {
+
+    const {
+
+      nombre,
+      correo,
+      password,
+      rol
+
+    } = req.body;
+
+
+
+
+    // CREAR EN AUTH
+
+    const {
+
+      error: authError
+
+    } =
+    await supabase
+      .auth
+      .admin
+      .createUser({
+
+        email: correo,
+
+        password: password,
+
+        email_confirm: true
+
+      });
+
+
+
+
+    if (authError) {
+
+      console.log(authError);
+
+      return res
+        .status(500)
+        .json(authError);
+
+    }
+
+
+
+
+    // GUARDAR EN TABLA
+
+    const {
+
+      data,
+      error
+
+    } =
+    await supabase
+      .from("usuarios")
+      .insert([{
+
+        nombre,
+
+        correo,
+
+        password,
+
+        rol
+
+      }])
+      .select();
+
+
+
+
+    if (error) {
+
+      console.log(error);
+
+      return res
+        .status(500)
+        .json(error);
+
+    }
+
+
+
+
+    res.json(data);
+
+
+
+
+  } catch (error) {
+
+    console.log(error);
+
+    res.status(500).json(error);
+
+  }
+
+});
+
+
+
+
+// ============================
+// EDITAR USUARIO
 // ============================
 
 router.put("/:id", async (req, res) => {
 
   try {
 
-    const { id } = req.params;
+    const { id } =
+      req.params;
 
     const {
 
       nombre,
-      serial,
-      categoria,
-      marca,
-      modelo,
-      ubicacion
+      correo,
+      password,
+      rol
 
     } = req.body;
 
@@ -156,19 +200,22 @@ router.put("/:id", async (req, res) => {
 
 
     const {
+
       data,
       error
+
     } =
     await supabase
-      .from("activos")
+      .from("usuarios")
       .update({
 
         nombre,
-        serial,
-        categoria,
-        marca,
-        modelo,
-        ubicacion
+
+        correo,
+
+        password,
+
+        rol
 
       })
       .eq("id", id)
@@ -199,10 +246,7 @@ router.put("/:id", async (req, res) => {
 
     console.log(error);
 
-    res.status(500).json({
-      error:
-      "Error actualizando activo"
-    });
+    res.status(500).json(error);
 
   }
 
@@ -212,23 +256,26 @@ router.put("/:id", async (req, res) => {
 
 
 // ============================
-// ELIMINAR ACTIVO
+// ELIMINAR USUARIO
 // ============================
 
 router.delete("/:id", async (req, res) => {
 
   try {
 
-    const { id } = req.params;
+    const { id } =
+      req.params;
 
 
 
 
     const {
+
       error
+
     } =
     await supabase
-      .from("activos")
+      .from("usuarios")
       .delete()
       .eq("id", id);
 
@@ -249,8 +296,10 @@ router.delete("/:id", async (req, res) => {
 
 
     res.json({
+
       mensaje:
-      "Activo eliminado"
+      "Usuario eliminado"
+
     });
 
 
@@ -260,10 +309,7 @@ router.delete("/:id", async (req, res) => {
 
     console.log(error);
 
-    res.status(500).json({
-      error:
-      "Error eliminando activo"
-    });
+    res.status(500).json(error);
 
   }
 
