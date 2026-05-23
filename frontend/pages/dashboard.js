@@ -35,7 +35,7 @@ export default function Dashboard() {
             <DashboardCard titulo="Usuarios" valor={stats.totalUsuarios} />
           </div>
           <div className="bg-white p-6 rounded-xl shadow-md">
-            <GraficaCategorias />
+            <GraficaCategorias categorias={stats.categorias || []} />
           </div>
         </main>
       </div>
