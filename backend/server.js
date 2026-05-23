@@ -9,9 +9,16 @@ const dashboardRoutes = require("./routes/dashboard");
 
 const app = express();
 
-// Configuración de CORS preparada para desarrollo local y producción
+// CORS flexible para evitar errores de bloqueo
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:3000",
+  origin: function (origin, callback) {
+    // Permite peticiones desde tu dominio de Netlify y también desarrollo local
+    if (!origin || origin.includes("gestiact.netlify.app") || origin.includes("localhost")) {
+      callback(null, true);
+    } else {
+      callback(new Error("No permitido por CORS"));
+    }
+  },
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));
