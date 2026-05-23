@@ -7,12 +7,7 @@ export default function Activos() {
   const [activos, setActivos] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [form, setForm] = useState({
-    nombre: "",
-    serial: "",
-    categoria: "",
-    marca: "",
-    modelo: "",
-    ubicacion: "",
+    nombre: "", serial: "", categoria: "", marca: "", modelo: "", ubicacion: "",
   });
 
   const [editando, setEditando] = useState(false);
@@ -26,29 +21,27 @@ export default function Activos() {
 
   const mostrarNotificacion = (mensaje, tipo) => {
     setNotificacion({ mensaje, tipo });
-    setTimeout(() => {
-      setNotificacion({ mensaje: "", tipo: "" });
-    }, 3000);
+    setTimeout(() => setNotificacion({ mensaje: "", tipo: "" }), 3000);
   };
 
-  const recargarTabla = () => {
-    setActualizador((prev) => prev + 1);
-  };
+  const recargarTabla = () => setActualizador((prev) => prev + 1);
 
   useEffect(() => {
     let montado = true;
-
     const obtenerDatos = async () => {
       try {
-        const resActivos = await fetch(`${API_URL}/api/activos`);
+        const [resActivos, resCategorias] = await Promise.all([
+          fetch(`${API_URL}/api/activos`),
+          fetch(`${API_URL}/api/categorias`)
+        ]);
+        
         const dataActivos = await resActivos.json();
-
-        const resCategorias = await fetch(`${API_URL}/api/categorias`);
         const dataCategorias = await resCategorias.json();
 
         if (montado) {
-          setActivos(dataActivos || []);
-          setCategorias(dataCategorias || []);
+          // Nos aseguramos de asignar un arreglo vacío si los datos vienen mal
+          setActivos(Array.isArray(dataActivos) ? dataActivos : []);
+          setCategorias(Array.isArray(dataCategorias) ? dataCategorias : []);
         }
       } catch (error) {
         console.error("Error al cargar los datos:", error);
@@ -56,46 +49,29 @@ export default function Activos() {
     };
 
     obtenerDatos();
-
-    return () => {
-      montado = false;
-    };
+    return () => { montado = false; };
   }, [API_URL, actualizador]);
 
   const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
-    });
+    setForm({ ...form, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     try {
-      if (editando) {
-        await fetch(`${API_URL}/api/activos/${activoId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form),
-        });
-        mostrarNotificacion("Activo actualizado correctamente.", "exito");
-      } else {
-        await fetch(`${API_URL}/api/activos`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form),
-        });
-        mostrarNotificacion("Activo creado correctamente.", "exito");
-      }
-
+      const url = editando ? `${API_URL}/api/activos/${activoId}` : `${API_URL}/api/activos`;
+      await fetch(url, {
+        method: editando ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      mostrarNotificacion(editando ? "Actualizado correctamente." : "Creado correctamente.", "exito");
       setForm({ nombre: "", serial: "", categoria: "", marca: "", modelo: "", ubicacion: "" });
       setEditando(false);
       setActivoId(null);
       recargarTabla();
     } catch (error) {
-      console.error(error);
-      mostrarNotificacion("Ocurrió un error al procesar la solicitud.", "error");
+      mostrarNotificacion("Error al procesar la solicitud.", "error");
     }
   };
 
@@ -110,29 +86,6 @@ export default function Activos() {
       modelo: activo.modelo || "",
       ubicacion: activo.ubicacion || "",
     });
-  };
-
-  const solicitarEliminacion = (id) => {
-    setActivoAEliminar(id);
-  };
-
-  const confirmarEliminacion = async () => {
-    try {
-      await fetch(`${API_URL}/api/activos/${activoAEliminar}`, {
-        method: "DELETE",
-      });
-      mostrarNotificacion("Activo eliminado correctamente.", "exito");
-      setActivoAEliminar(null);
-      recargarTabla();
-    } catch (error) {
-      console.error(error);
-      mostrarNotificacion("Error al eliminar el activo.", "error");
-      setActivoAEliminar(null);
-    }
-  };
-
-  const cancelarEliminacion = () => {
-    setActivoAEliminar(null);
   };
 
   return (
@@ -150,26 +103,19 @@ export default function Activos() {
               </div>
             )}
 
-            {activoAEliminar && (
-              <div className="mb-6 p-4 bg-red-100 border border-red-400 rounded-lg flex flex-col md:flex-row items-center justify-between gap-4">
-                <span className="text-red-800 font-semibold">¿Está seguro de eliminar este activo?</span>
-                <div className="flex gap-3">
-                  <button onClick={cancelarEliminacion} className="bg-gray-500 text-white px-4 py-2 rounded">Cancelar</button>
-                  <button onClick={confirmarEliminacion} className="bg-red-600 text-white px-4 py-2 rounded">Confirmar</button>
-                </div>
-              </div>
-            )}
-
             <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl shadow-md mb-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <input name="nombre" placeholder="Nombre" value={form.nombre} onChange={handleChange} className="border p-3 rounded-lg" required />
                 <input name="serial" placeholder="Serial" value={form.serial} onChange={handleChange} className="border p-3 rounded-lg" required />
+                
+                {/* BLINDAJE: categorias?.map */}
                 <select name="categoria" value={form.categoria} onChange={handleChange} className="border p-3 rounded-lg" required>
                   <option value="">Seleccione categoría</option>
                   {categorias?.map((c) => (
                     <option key={c.id} value={c.nombre}>{c.nombre}</option>
                   ))}
                 </select>
+                
                 <input name="marca" placeholder="Marca" value={form.marca} onChange={handleChange} className="border p-3 rounded-lg" required />
                 <input name="modelo" placeholder="Modelo" value={form.modelo} onChange={handleChange} className="border p-3 rounded-lg" required />
                 <input name="ubicacion" placeholder="Ubicación" value={form.ubicacion} onChange={handleChange} className="border p-3 rounded-lg" required />
@@ -190,6 +136,7 @@ export default function Activos() {
                   </tr>
                 </thead>
                 <tbody>
+                  {/* BLINDAJE: activos?.map */}
                   {activos?.map((a) => (
                     <tr key={a.id} className="hover:bg-gray-50">
                       <td className="border p-3">{a.nombre}</td>
@@ -197,7 +144,7 @@ export default function Activos() {
                       <td className="border p-3">{a.categoria}</td>
                       <td className="border p-3 flex gap-2">
                         <button onClick={() => editarActivo(a)} className="bg-yellow-500 text-white px-3 py-1 rounded">Editar</button>
-                        <button onClick={() => solicitarEliminacion(a.id)} className="bg-red-600 text-white px-3 py-1 rounded">Eliminar</button>
+                        <button onClick={() => setActivoAEliminar(a.id)} className="bg-red-600 text-white px-3 py-1 rounded">Eliminar</button>
                       </td>
                     </tr>
                   ))}
